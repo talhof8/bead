@@ -1,0 +1,48 @@
+def main() {
+    int i = 5; // this is a comment
+
+    float f = 3.54;
+
+    bool b = true;
+
+    /**
+    * This is a multi-line comment (/** ... */).
+    * Here are some examples on how to use strings:
+    */
+    str s1 = "Foo Bar";
+    s1 = "Hello, ";
+    s1 += "World!";
+    str s2 = "
+        Multline, 
+        String.
+        New line can be scaped! ->\
+        See?
+    ";
+    str s3 = "Don\"t you just love this language?";
+    str s4 = #"Too much escaping to do?
+    Use raw string literals instead.
+    \n \t """""""
+    "#;
+
+    char c = 'r';
+
+    bytes ba = b"\x34\x45\x12\x9\x123";
+
+    list l = [i, f, b, s];
+    l.append(c);
+    l.remove(b);
+
+    tuple t = (1, "John", "Doe", "United States", 1974);
+
+    dict d = {
+        "key": "value"
+    };
+    d[c] = s;
+    d.remove("key");
+
+    enum Color = {
+        Yellow,
+        Green=2,
+        Blue=3
+    };
+}
