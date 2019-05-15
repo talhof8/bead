@@ -61,21 +61,7 @@ fn get_identifiers_map() -> HashMap<String, Token> {
 }
 
 fn get_operators() -> Vec<char> {
-    let mut operators: Vec<char> = Vec::new();
-    operators.push('+');
-    operators.push('-');
-    operators.push('*');
-    operators.push('/');
-    operators.push('%');
-    operators.push('!');
-    operators.push('=');
-    operators.push('|');
-    operators.push('&');
-    operators.push('^');
-    operators.push('<');
-    operators.push('>');
-    operators.push('~');
-    operators
+    vec!['+', '-', '*', '/', '%', '!', '=', '|', '&', '^', '<', '>', '~']
 }
 
 impl<T> Lexer<T> 
