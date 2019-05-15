@@ -1,11 +1,14 @@
 use std::iter::Peekable;
 use std::collections::HashMap;
+use std::str::FromStr;
+use num_bigint::BigInt;
 use crate::parser::errors::LexerError;
 use crate::parser::token::Token;
 
 const SEMICOLON: char = ';';
 const DOUBLE_QUOTES: char = '"';
 const BYTES_PREFIX: char = 'b';
+const DOT_SEPERATOR: char = '.';
 
 pub struct Lexer<T: Iterator<Item = char>> { 
     input: Peekable<T>,
@@ -13,7 +16,8 @@ pub struct Lexer<T: Iterator<Item = char>> {
     previous_chr: Option<char>,
     row: usize,
     column: usize,
-    identifiers: HashMap<String, Token>
+    identifiers: HashMap<String, Token>,
+    operators: Vec<char>
 }
 
 fn get_identifiers_map() -> HashMap<String, Token> {
@@ -56,6 +60,23 @@ fn get_identifiers_map() -> HashMap<String, Token> {
     identifiers
 }
 
+fn get_operators() -> Vec<char> {
+    let mut operators: Vec<char> = Vec::new();
+    operators.push('+');
+    operators.push('-');
+    operators.push('*');
+    operators.push('/');
+    operators.push('%');
+    operators.push('=');
+    operators.push('|');
+    operators.push('&');
+    operators.push('^');
+    operators.push('<');
+    operators.push('>');
+    operators.push('~');
+    operators
+}
+
 impl<T> Lexer<T> 
 where 
     T: Iterator<Item = char>, 
@@ -67,7 +88,8 @@ where
             previous_chr: None,
             row: 0,
             column: 0,
-            identifiers: get_identifiers_map()
+            identifiers: get_identifiers_map(),
+            operators: get_operators()
         }
     }
 
@@ -83,6 +105,10 @@ where
 
         if self.is_letter() {
             return self.handle_identifier();
+        }
+
+        if self.is_digit() {
+            return self.handle_number();
         }
 
         Err(LexerError { message: String::from("Failed to lex source") })
@@ -117,10 +143,26 @@ where
         };
     }
 
+    fn is_alphanumeric(&self) -> bool {
+        self.current_chr.unwrap().is_ascii_alphanumeric()
+    }
+
     fn is_letter(&self) -> bool {
         self.current_chr.unwrap().is_ascii_alphabetic()
     }
+
+    fn is_digit(&self) -> bool {
+        self.current_chr.unwrap().is_ascii_digit()
+    }
+
+    fn is_operator(&self) -> bool {
+        self.operators.contains(&self.current_chr.unwrap())
+    }
     
+    fn char_equals(&self, compared_char: char) -> bool {
+        self.current_chr.unwrap() == compared_char
+    }
+
     fn skip_redundant_characters(&mut self) {
         while self.current_chr.is_some() && (self.is_whitespace() || self.is_newline()) {
             if self.is_newline() {
@@ -136,51 +178,86 @@ where
     }
 
     fn handle_identifier(&mut self) -> Result<Token, LexerError> {
-        let mut name = String::from("");
+        let mut identifier = String::from("");
 
         // Loop until end of word
-        // todo: do not allow symbol names to start with a digit
-        while self.current_chr.is_some() && self.current_chr.unwrap().is_ascii_alphanumeric() { 
-            name.push(self.current_chr.unwrap());
+        while self.current_chr.is_some() && self.is_alphanumeric() { 
+            identifier.push(self.current_chr.unwrap());
             self.next_char();
         }
         
         // Well-known, common identifiers (e.g: "if", "true", "int", "while", ...)
-        if self.identifiers.contains_key(&name) {
-            return Ok(self.identifiers.get(&name).unwrap().clone());
+        if self.identifiers.contains_key(&identifier) {
+            return Ok(self.identifiers.get(&identifier).unwrap().clone());
         }
         // Literal bytes values (i.e: b"...")
-        else if name.len() == 1 && self.previous_chr.unwrap() == BYTES_PREFIX &&
-         self.current_chr.is_some() && self.current_chr.unwrap() == DOUBLE_QUOTES {
-            // Name needs to include the left double-quotes as well.
-            name.push(self.current_chr.unwrap());
+        else if identifier.len() == 1 && self.previous_chr.unwrap() == BYTES_PREFIX 
+            && self.current_chr.is_some() && self.char_equals(DOUBLE_QUOTES) {
+            // Identifier needs to include the left double-quotes as well.
+            identifier.push(self.current_chr.unwrap());
             self.next_char();
             
-            while self.current_chr.is_some() && self.current_chr.unwrap() != DOUBLE_QUOTES {
-                name.push(self.current_chr.unwrap());
+            while self.current_chr.is_some() && !self.char_equals(DOUBLE_QUOTES) {
+                identifier.push(self.current_chr.unwrap());
                 self.next_char();
             }
 
-            if self.current_chr.unwrap() != DOUBLE_QUOTES {
+            if !self.char_equals(DOUBLE_QUOTES) {
                 return Err(LexerError { message: String::from("Failed to parse bytes value: missing double-quotes") });
             }
             else {
                 // Name needs to include the right double-quotes as well.
-                name.push(self.current_chr.unwrap());
+                identifier.push(self.current_chr.unwrap());
                 self.next_char();
 
-                return Ok(Token::BytesValue { value: name.as_bytes().to_vec() });
+                return Ok(Token::BytesValue { value: identifier.as_bytes().to_vec() });
             }
         }
         // Symbol names
         else {
-            return Ok(Token::Symbol { name: name });
+            return Ok(Token::Symbol { name: identifier });
         }
+    }
+
+    fn handle_number(&mut self) ->  Result<Token, LexerError> {
+        let mut number = String::from("");
+
+        while self.current_chr.is_some() && (self.is_digit() || self.char_equals(DOT_SEPERATOR)) {
+            number.push(self.current_chr.unwrap());
+            self.next_char();
+        }
+
+        if self.current_chr.is_some() && self.is_letter() {
+            return Err(LexerError { message: String::from("Number literal cannot end with a letter") });
+        }
+
+        return match number.matches(DOT_SEPERATOR).count() {
+            1 => {
+                let parsed_number = number.parse::<f64>();
+
+                if parsed_number.is_err() {
+                    return Err(LexerError { message: String::from("Could not parse float") })
+                }
+
+                Ok(Token::FloatValue { value: parsed_number.unwrap() })
+            },
+            0 => {
+                let parsed_number = BigInt::from_str(&number);
+
+                if parsed_number.is_err() {
+                    return Err(LexerError { message: String::from("Could not parse int") })
+                }
+
+                Ok(Token::IntValue { value: parsed_number.unwrap() })
+            },
+            _ => Err(LexerError { message: String::from("Invalid number - too many dot seperators") })
+        };
     }
 }
 
 #[cfg(test)]
 mod tests {
+    use num_bigint::BigInt;
     use crate::parser::lexer::Lexer;
     use crate::parser::token::Token;
     use crate::parser::errors::LexerError;
@@ -235,6 +312,21 @@ mod tests {
             tokens, 
             vec![
                 Token::BytesValue { value: String::from(r#"b"hello \x01\03 \x44""#).as_bytes().to_vec() },
+            ]
+        );
+    }
+
+    #[test]
+    fn test_number_literal() {
+        let source = String::from("423 763.433 0 24454333");
+        let tokens = lex_source(&source);
+        assert_eq!(
+            tokens, 
+            vec![
+                Token::IntValue { value: BigInt::from(423) },
+                Token::FloatValue { value: 763.433 },
+                Token::IntValue { value: BigInt::from(0) },
+                Token::IntValue { value: BigInt::from(24454333) },
             ]
         );
     }
