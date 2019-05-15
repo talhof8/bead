@@ -197,7 +197,7 @@ where
                 return Err(LexerError { message: String::from("Failed to parse bytes value: missing double-quotes") });
             }
             else {
-                // Name needs to include the right double-quotes as well.
+                // Identifier needs to include the right double-quotes as well.
                 identifier.push(self.current_chr.unwrap());
                 self.next_char();
 
