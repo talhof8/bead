@@ -67,6 +67,7 @@ fn get_operators() -> Vec<char> {
     operators.push('*');
     operators.push('/');
     operators.push('%');
+    operators.push('!');
     operators.push('=');
     operators.push('|');
     operators.push('&');
@@ -109,6 +110,10 @@ where
 
         if self.is_digit() {
             return self.handle_number();
+        }
+
+        if self.is_operator() {
+            return self.handle_operator();
         }
 
         Err(LexerError { message: String::from("Failed to lex source") })
@@ -186,7 +191,7 @@ where
             self.next_char();
         }
         
-        // Well-known, common identifiers (e.g: "if", "true", "int", "while", ...)
+        // Common identifiers (e.g: "if", "true", "int", "while", ...)
         if self.identifiers.contains_key(&identifier) {
             return Ok(self.identifiers.get(&identifier).unwrap().clone());
         }
@@ -251,6 +256,81 @@ where
                 Ok(Token::IntValue { value: parsed_number.unwrap() })
             },
             _ => Err(LexerError { message: String::from("Invalid number - too many dot seperators") })
+        };
+    }
+
+    fn handle_operator(&mut self) -> Result<Token, LexerError> {
+        return match self.current_chr.unwrap() {
+            '+' => Ok(Token::Add),
+            '-' => Ok(Token::Subtract),
+            '*' => Ok(Token::Multiply),
+            '/' => Ok(Token::Divide),
+            '%' => Ok(Token::Modulo),
+            '!' => {
+                return match self.input.peek() {
+                    Some('=') => {
+                        self.next_char();
+                        return Ok(Token::NotEquals);
+                    },
+                    _ => Ok(Token::Not)
+                }
+            },
+            '=' => {
+                return match self.input.peek() {
+                    Some('=') => {
+                        self.next_char();
+                        return Ok(Token::Equals);
+                    },
+                    _ => Ok(Token::Assignment)
+                }
+            },
+            '|' => {
+                return match self.input.peek() {
+                    Some('|') => {
+                        self.next_char();
+                        return Ok(Token::LogicalOr);
+                    },
+                    _ => Ok(Token::BitwiseOr)
+                }
+            },
+            '&' => {
+                return match self.input.peek() {
+                    Some('&') => {
+                        self.next_char();
+                        return Ok(Token::LogicalAnd);
+                    },
+                    _ => Ok(Token::BitwiseAnd)
+                }
+            },
+            '~' => Ok(Token::BitwiseNot),
+            '^' => Ok(Token::BitwiseXor),
+            '>' => {
+                return match self.input.peek() {
+                    Some('>') => {
+                        self.next_char();
+                        return Ok(Token::BitwiseRightShift);
+                    },
+                    Some('=') => {
+                        self.next_char();
+                        return Ok(Token::GreaterEqual);
+                    },
+                    _ => Ok(Token::Greater)
+                }
+            },
+            '<' => {
+                return match self.input.peek() {
+                    Some('<') => {
+                        self.next_char();
+                        return Ok(Token::BitwiseLeftShift);
+                    },
+                    Some('=') => {
+                        self.next_char();
+                        return Ok(Token::LessEqual);
+                    },
+                    _ => Ok(Token::Less)
+                }
+            },
+            _=> Err(LexerError { message: String::from("Could not parse operator") })
         };
     }
 }
@@ -327,6 +407,38 @@ mod tests {
                 Token::FloatValue { value: 763.433 },
                 Token::IntValue { value: BigInt::from(0) },
                 Token::IntValue { value: BigInt::from(24454333) },
+            ]
+        );
+    }
+
+    #[test]
+    fn test_operators() {
+        let source = String::from("|| && + - * / % | ^ ~ & >> << ! == != > >= < <= =");
+        let tokens = lex_source(&source);
+        assert_eq!(
+            tokens, 
+            vec![
+                Token::LogicalOr,
+                Token::LogicalAnd,
+                Token::Add,
+                Token::Subtract,
+                Token::Multiply,
+                Token::Divide,
+                Token::Modulo,
+                Token::BitwiseOr,
+                Token::BitwiseXor,
+                Token::BitwiseNot,
+                Token::BitwiseAnd,
+                Token::BitwiseRightShift,
+                Token::BitwiseLeftShift,
+                Token::Not,
+                Token::Equals,
+                Token::NotEquals,
+                Token::Greater,
+                Token::GreaterEqual,
+                Token::Less,
+                Token::LessEqual,
+                Token::Assignment
             ]
         );
     }

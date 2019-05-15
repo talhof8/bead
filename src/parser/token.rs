@@ -14,7 +14,6 @@ pub enum Token {
     Colon, // ':'
     DoubleColons, // '::'
     Dot, // '.'
-    Assignment, // '='
     Hyphen, // '-'
     RightArrow, // '>'
     Comma, // ','
@@ -80,10 +79,12 @@ pub enum Token {
     BitwiseAnd,
     BitwiseRightShift,
     BitwiseLeftShift,
-    Equal,
-    NotEqual,
+    Not,
+    Equals,
+    NotEquals,
     Greater,
     GreaterEqual,
     Less,
     LessEqual,
+    Assignment,
 }
