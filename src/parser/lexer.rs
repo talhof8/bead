@@ -20,7 +20,8 @@ pub struct Lexer<T: Iterator<Item = char>> {
     column: usize,
     identifiers: HashMap<String, Token>,
     operators: Vec<char>,
-    delimiters: Vec<char>
+    delimiters: Vec<char>,
+    current_char_processed: bool,
 }
 
 fn get_identifiers_map() -> HashMap<String, Token> {
@@ -88,21 +89,27 @@ where
             column: 0,
             identifiers: get_identifiers_map(),
             operators: get_operators(),
-            delimiters: get_delimiters()
+            delimiters: get_delimiters(),
+            current_char_processed: true
         }
     }
 
     // todo: implement as iterator
     pub fn next_token(&mut self) -> Result<Token, LexerError> {
-        self.next_char();
+        if self.current_char_processed {
+            self.next_char();
+        }
+        else {
+            self.current_char_processed = true;
+        }
+        
+        self.skip_redundant_characters();
 
         if self.current_chr.is_none() {
             return Err(LexerError {
                 message: String::from("No more tokens"),
             });
         }
-
-        self.skip_redundant_characters();
 
         if self.is_letter() || self.char_equals(UNDERSCORE) {
             return self.handle_identifier();
@@ -216,6 +223,8 @@ where
             self.next_char();
         }
 
+        self.current_char_processed = false;
+
         // Common identifiers (e.g: "if", "true", "int", "while", ...)
         if self.identifiers.contains_key(&identifier) {
             return Ok(self.identifiers.get(&identifier).unwrap().clone());
@@ -226,6 +235,8 @@ where
             && self.current_chr.is_some()
             && self.char_equals(DOUBLE_QUOTES)
         {
+            self.current_char_processed = true;
+
             identifier.push(self.current_chr.unwrap());
             self.next_char();
 
@@ -261,11 +272,7 @@ where
             self.next_char();
         }
 
-        if self.current_chr.is_some() && self.is_letter() {
-            return Err(LexerError {
-                message: String::from("Number literal cannot end with a letter"),
-            });
-        }
+        self.current_char_processed = false;
 
         return match number.matches(DOT_SEPERATOR).count() {
             1 => {
@@ -280,7 +287,7 @@ where
                 Ok(Token::FloatValue {
                     value: parsed_number.unwrap(),
                 })
-            }
+            },
             0 => {
                 let parsed_number = BigInt::from_str(&number);
 
@@ -293,10 +300,10 @@ where
                 Ok(Token::IntValue {
                     value: parsed_number.unwrap(),
                 })
-            }
+            },
             _ => Err(LexerError {
                 message: String::from("Invalid number - too many dot seperators"),
-            }),
+            })
         };
     }
 
@@ -499,6 +506,42 @@ mod tests {
     }
 
     #[test]
+    fn test_assignment_expressions() {
+        let source = String::from(r#"
+            int i = 5;
+            float f = 3.54;
+            bool b = true;
+            str s1 = "Hello World";
+        "#);
+        let tokens = lex_source(&source);
+        assert_eq!(
+            tokens,
+            vec![
+                Token::IntType,
+                Token::Symbol { name: String::from("i") },
+                Token::Assignment,
+                Token::IntValue { value: BigInt::from(5) },
+                Token::Semicolon,
+                Token::FloatType,
+                Token::Symbol { name: String::from("f") },
+                Token::Assignment,
+                Token::FloatValue { value: 3.54 },
+                Token::Semicolon,
+                Token::BoolType,
+                Token::Symbol { name: String::from("b") },
+                Token::Assignment,
+                Token::BoolValue { value: true },
+                Token::Semicolon,
+                Token::StringType,
+                Token::Symbol { name: String::from("s1") },
+                Token::Assignment,
+                Token::StringValue { value: String::from(r#""Hello World""#) },
+                Token::Semicolon
+            ]
+        );
+    }
+
+    #[test]
     fn test_variable_identifiers() {
         let source =
             String::from("str some_str int i float _ff bytes ba char c tuple t list lll dict d enum e");
@@ -653,22 +696,6 @@ mod tests {
                 Token::Comma,
                 Token::StaticAccessor,
                 Token::FnReturnTypeDelim
-            ]
-        );
-    }
-
-    #[test]
-    fn test_assignment_expression() {
-        let source = String::from(r#"str s1 = "Hello World";"#);
-        let tokens = lex_source(&source);
-        assert_eq!(
-            tokens,
-            vec![
-                Token::StringType,
-                Token::Symbol { name: String::from("s1") },
-                Token::Assignment,
-                Token::StringValue { value: String::from(r#""Hello World""#) },
-                Token::Semicolon
             ]
         );
     }
