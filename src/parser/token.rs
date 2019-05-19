@@ -11,11 +11,9 @@ pub enum Token {
     LeftSquareBracket, // '['
     RightSquareBracket, // ']'
     Semicolon, // ';'
-    Colon, // ':'
-    DoubleColons, // '::'
-    Dot, // '.'
-    Hyphen, // '-'
-    RightArrow, // '>'
+    StaticAccessor, // '::'
+    MemberAccessor, // '.'
+    FnReturnTypeDelim, // '->'
     Comma, // ','
 
     // Literal values

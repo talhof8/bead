@@ -18,6 +18,7 @@ pub struct Lexer<T: Iterator<Item = char>> {
     column: usize,
     identifiers: HashMap<String, Token>,
     operators: Vec<char>,
+    delimiters: Vec<char>
 }
 
 fn get_identifiers_map() -> HashMap<String, Token> {
@@ -66,6 +67,12 @@ fn get_operators() -> Vec<char> {
     ]
 }
 
+fn get_delimiters() -> Vec<char> {
+    vec![
+        '{', '}', '[', ']', '(', ')', ',', ';', ':', '.', 
+    ]
+}
+
 impl<T> Lexer<T>
 where
     T: Iterator<Item = char>,
@@ -79,6 +86,7 @@ where
             column: 0,
             identifiers: get_identifiers_map(),
             operators: get_operators(),
+            delimiters: get_delimiters()
         }
     }
 
@@ -104,6 +112,10 @@ where
 
         if self.is_operator() {
             return self.handle_operator();
+        }
+
+        if self.is_delimiter() {
+            return self.handle_delimiter();
         }
 
         Err(LexerError {
@@ -156,6 +168,10 @@ where
         self.operators.contains(&self.current_chr.unwrap())
     }
 
+    fn is_delimiter(&self) -> bool {
+        self.delimiters.contains(&self.current_chr.unwrap())
+    }
+
     fn char_equals(&self, compared_char: char) -> bool {
         self.current_chr.unwrap() == compared_char
     }
@@ -177,6 +193,7 @@ where
         let mut identifier = String::from("");
 
         // Loop until end of word
+        // todo: allow underscores (so that variable & function names can be snake_cased)
         while self.current_chr.is_some() && self.is_alphanumeric() {
             identifier.push(self.current_chr.unwrap());
             self.next_char();
@@ -269,7 +286,15 @@ where
     fn handle_operator(&mut self) -> Result<Token, LexerError> {
         return match self.current_chr.unwrap() {
             '+' => Ok(Token::Add),
-            '-' => Ok(Token::Subtract),
+            '-' => {
+                return match self.input.peek() {
+                    Some('>') => {
+                        self.next_char();
+                        return Ok(Token::FnReturnTypeDelim);
+                    },
+                    _ => Ok(Token::Subtract)
+                }
+            },
             '*' => Ok(Token::Multiply),
             '/' => Ok(Token::Divide),
             '%' => Ok(Token::Modulo),
@@ -278,37 +303,37 @@ where
                     Some('=') => {
                         self.next_char();
                         return Ok(Token::NotEquals);
-                    }
-                    _ => Ok(Token::Not),
+                    },
+                    _ => Ok(Token::Not)
                 }
-            }
+            },
             '=' => {
                 return match self.input.peek() {
                     Some('=') => {
                         self.next_char();
                         return Ok(Token::Equals);
-                    }
-                    _ => Ok(Token::Assignment),
+                    },
+                    _ => Ok(Token::Assignment)
                 }
-            }
+            },
             '|' => {
                 return match self.input.peek() {
                     Some('|') => {
                         self.next_char();
                         return Ok(Token::LogicalOr);
-                    }
-                    _ => Ok(Token::BitwiseOr),
+                    },
+                    _ => Ok(Token::BitwiseOr)
                 }
-            }
+            },
             '&' => {
                 return match self.input.peek() {
                     Some('&') => {
                         self.next_char();
                         return Ok(Token::LogicalAnd);
-                    }
-                    _ => Ok(Token::BitwiseAnd),
+                    },
+                    _ => Ok(Token::BitwiseAnd)
                 }
-            }
+            },
             '~' => Ok(Token::BitwiseNot),
             '^' => Ok(Token::BitwiseXor),
             '>' => {
@@ -316,31 +341,70 @@ where
                     Some('>') => {
                         self.next_char();
                         return Ok(Token::BitwiseRightShift);
-                    }
+                    },
                     Some('=') => {
                         self.next_char();
                         return Ok(Token::GreaterEqual);
-                    }
-                    _ => Ok(Token::Greater),
+                    },
+                    _ => Ok(Token::Greater)
                 }
-            }
+            },
             '<' => {
                 return match self.input.peek() {
                     Some('<') => {
                         self.next_char();
                         return Ok(Token::BitwiseLeftShift);
-                    }
+                    },
                     Some('=') => {
                         self.next_char();
                         return Ok(Token::LessEqual);
-                    }
-                    _ => Ok(Token::Less),
+                    },
+                    _ => Ok(Token::Less)
                 }
-            }
+            },
             _ => Err(LexerError {
                 message: String::from("Could not parse operator"),
-            }),
+            })
         };
+    }
+
+    fn handle_delimiter(&mut self) -> Result<Token, LexerError> {
+        return match self.current_chr.unwrap() {
+            '(' => Ok(Token::LeftParens),
+            ')' => Ok(Token::RightParens),
+            '{' => Ok(Token::LeftCurlyBracket),
+            '}' => Ok(Token::RightCurlyBracket),
+            '[' => Ok(Token::LeftSquareBracket),
+            ']' => Ok(Token::RightSquareBracket),
+            ';' => Ok(Token::Semicolon),
+            ',' => Ok(Token::Comma),
+            '.' => Ok(Token::MemberAccessor),
+            '-' => {
+                return match self.input.peek() {
+                    Some('>') => {
+                        self.next_char();
+                        return Ok(Token::FnReturnTypeDelim);
+                    },
+                    _ => Err(LexerError {
+                        message: String::from("Could not parse delimiter"),
+                    })
+                }
+            },
+            ':' => {
+                return match self.input.peek() {
+                    Some(':') => {
+                        self.next_char();
+                        return Ok(Token::StaticAccessor);
+                    },
+                    _ => Err(LexerError {
+                        message: String::from("Could not parse delimiter"),
+                    })
+                }
+            },
+            _ => Err(LexerError {
+                message: String::from("Could not parse delimiter"),
+            })
+        }
     }
 }
 
@@ -473,6 +537,28 @@ mod tests {
                 Token::Less,
                 Token::LessEqual,
                 Token::Assignment
+            ]
+        );
+    }
+
+    #[test]
+    fn test_delimiters() {
+        let source = String::from("( ) { } [ ] . ; , :: ->");
+        let tokens = lex_source(&source);
+        assert_eq!(
+            tokens,
+            vec![
+                Token::LeftParens,
+                Token::RightParens,
+                Token::LeftCurlyBracket,
+                Token::RightCurlyBracket,
+                Token::LeftSquareBracket,
+                Token::RightSquareBracket,
+                Token::MemberAccessor,
+                Token::Semicolon,
+                Token::Comma,
+                Token::StaticAccessor,
+                Token::FnReturnTypeDelim
             ]
         );
     }
