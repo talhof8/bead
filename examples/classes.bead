@@ -44,14 +44,14 @@ class FileLogger(Logger) {
     pub str directory;
     priv File file; 
 
-    pub construct(str directory, *args, **kwargs) {
+    fn construct(str directory, *args, **kwargs) {
         super(*args, **kwargs);
 
         self.directory = directory;
         self.file = new File(directory, self.name);
     }
 
-    pub destruct() {
+    fn destruct() {
         // close file maybe?
     }
 

@@ -57,6 +57,7 @@ pub enum Token {
     Destructor,
     Super,
     Return,
+    DelObject,
 
     // Operators
     LogicalOr,

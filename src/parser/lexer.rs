@@ -39,6 +39,7 @@ fn get_identifiers_map() -> HashMap<String, Token> {
     identifiers.insert(String::from("pub"), Token::Public);
     identifiers.insert(String::from("new"), Token::NewInstance);
     identifiers.insert(String::from("self"), Token::SelfInstance);
+    identifiers.insert(String::from("del"), Token::DelObject);
     identifiers.insert(String::from("construct"), Token::Constructor);
     identifiers.insert(String::from("destruct"), Token::Destructor);
     identifiers.insert(String::from("super"), Token::Super);
@@ -503,6 +504,71 @@ mod tests {
         }
 
         tokens
+    }
+
+    #[test]
+    fn test_class_structure() {
+        let source = String::from(r#"
+            class Logger {
+                priv str name;
+
+                fn construct(str name) {
+                    self.name = name;
+                }
+                
+                fn destruct() {
+                    int i = 76;
+                }
+
+                fn clone() -> Logger;
+            }
+        "#);
+        let tokens = lex_source(&source);
+        assert_eq!(
+            tokens,
+            vec![
+                Token::Class,
+                Token::Symbol { name: String::from("Logger") },
+                Token::LeftCurlyBracket,
+                Token::Private,
+                Token::StringType,
+                Token::Symbol { name: String::from("name") },
+                Token::Semicolon,
+                Token::Function,
+                Token::Constructor,
+                Token::LeftParens,
+                Token::StringType,
+                Token::Symbol { name: String::from("name") },
+                Token::RightParens,
+                Token::LeftCurlyBracket,
+                Token::SelfInstance,
+                Token::MemberAccessor,
+                Token::Symbol { name: String::from("name") },
+                Token::Assignment,
+                Token::Symbol { name: String::from("name") },
+                Token::Semicolon,
+                Token::RightCurlyBracket,
+                Token::Function,
+                Token::Destructor,
+                Token::LeftParens,
+                Token::RightParens,
+                Token::LeftCurlyBracket,
+                Token::IntType,
+                Token::Symbol { name: String::from("i") },
+                Token::Assignment,
+                Token::IntValue { value: BigInt::from(76) },
+                Token::Semicolon,
+                Token::RightCurlyBracket,
+                Token::Function,
+                Token::Symbol { name: String::from("clone") },
+                Token::LeftParens,
+                Token::RightParens,
+                Token::FnReturnTypeDelim,
+                Token::Symbol { name: String::from("Logger") },
+                Token::Semicolon,
+                Token::RightCurlyBracket
+            ]
+        );
     }
 
     #[test]
