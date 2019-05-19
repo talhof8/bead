@@ -111,6 +111,10 @@ where
             return self.handle_number();
         }
 
+        if self.is_beginning_of_string() {
+            return self.handle_string();
+        }
+
         if self.is_operator() {
             return self.handle_operator();
         }
@@ -161,6 +165,10 @@ where
         self.current_chr.unwrap().is_ascii_alphabetic()
     }
 
+    fn is_beginning_of_string(&self) -> bool {
+        self.char_equals(DOUBLE_QUOTES)
+    }
+
     fn is_digit(&self) -> bool {
         self.current_chr.unwrap().is_ascii_digit()
     }
@@ -203,7 +211,7 @@ where
         if self.identifiers.contains_key(&identifier) {
             return Ok(self.identifiers.get(&identifier).unwrap().clone());
         }
-        // Literal bytes values (i.e: b"...")
+        // Literal bytes value (i.e: b"h\x04\x12")
         else if identifier.len() == 1
             && self.previous_chr.unwrap() == BYTES_PREFIX
             && self.current_chr.is_some()
@@ -281,6 +289,31 @@ where
                 message: String::from("Invalid number - too many dot seperators"),
             }),
         };
+    }
+
+    fn handle_string(&mut self) -> Result<Token, LexerError> {
+        let mut string = String::from("");
+
+        string.push(self.current_chr.unwrap());
+        self.next_char();
+
+        while self.current_chr.is_some() && !self.char_equals(DOUBLE_QUOTES) {
+            string.push(self.current_chr.unwrap());
+            self.next_char();
+        }
+
+        if !self.char_equals(DOUBLE_QUOTES) {
+            return Err(LexerError {
+                message: String::from("Failed to parse string value: missing double-quotes"),
+            });
+        }
+
+        string.push(self.current_chr.unwrap());
+        self.next_char();
+
+        return Ok(Token::StringValue {
+            value: string
+        });
     }
 
     fn handle_operator(&mut self) -> Result<Token, LexerError> {
@@ -473,6 +506,18 @@ mod tests {
                     name: String::from("e")
                 },
             ]
+        );
+    }
+
+    #[test]
+    fn test_string_literal() {
+        let source = String::from(r#""Some string value""#);
+        let tokens = lex_source(&source);
+        assert_eq!(
+            tokens,
+            vec![Token::StringValue {
+                value: String::from(r#""Some string value""#)
+            },]
         );
     }
 

@@ -10,19 +10,6 @@ def main() {
     * Here are some examples on how to use strings:
     */
     str s1 = "Foo Bar";
-    s1 = "Hello, ";
-    s1 += "World!";
-    str s2 = "
-        Multline, 
-        String.
-        New line can be scaped! ->\
-        See?
-    ";
-    str s3 = "Don\"t you just love this language?";
-    str s4 = #"Too much escaping to do?
-    Use raw string literals instead.
-    \n \t """""""
-    "#;
 
     char c = 'r';
 
