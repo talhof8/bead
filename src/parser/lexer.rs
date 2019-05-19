@@ -318,7 +318,6 @@ where
         }
 
         string.push(self.current_chr.unwrap());
-        self.next_char();
 
         return Ok(Token::StringValue {
             value: string
@@ -654,6 +653,22 @@ mod tests {
                 Token::Comma,
                 Token::StaticAccessor,
                 Token::FnReturnTypeDelim
+            ]
+        );
+    }
+
+    #[test]
+    fn test_assignment_expression() {
+        let source = String::from(r#"str s1 = "Hello World";"#);
+        let tokens = lex_source(&source);
+        assert_eq!(
+            tokens,
+            vec![
+                Token::StringType,
+                Token::Symbol { name: String::from("s1") },
+                Token::Assignment,
+                Token::StringValue { value: String::from(r#""Hello World""#) },
+                Token::Semicolon
             ]
         );
     }
