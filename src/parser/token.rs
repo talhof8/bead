@@ -17,7 +17,6 @@ pub enum Token {
     Comma, // ','
 
     Symbol { name: String }, 
-    CustomType { name: String },
 
     // Builtin types
     IntType,
