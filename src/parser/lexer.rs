@@ -7,6 +7,7 @@ use std::str::FromStr;
 
 const SEMICOLON: char = ';';
 const DOUBLE_QUOTES: char = '"';
+const SINGLE_QUOTES: char = '\'';
 const UNDERSCORE: char = '_';
 const BYTES_PREFIX: char = 'b';
 const DOT_SEPERATOR: char = '.';
@@ -115,6 +116,10 @@ where
             return self.handle_string();
         }
 
+        if self.is_beginning_of_char() {
+            return self.handle_char();
+        }
+
         if self.is_operator() {
             return self.handle_operator();
         }
@@ -167,6 +172,10 @@ where
 
     fn is_beginning_of_string(&self) -> bool {
         self.char_equals(DOUBLE_QUOTES)
+    }
+
+    fn is_beginning_of_char(&self) -> bool {
+        self.char_equals(SINGLE_QUOTES)
     }
 
     fn is_digit(&self) -> bool {
@@ -313,6 +322,35 @@ where
 
         return Ok(Token::StringValue {
             value: string
+        });
+    }
+
+    fn handle_char(&mut self) -> Result<Token, LexerError> {
+        self.next_char();
+
+        if self.current_chr.is_none() {
+            return Err(LexerError {
+                message: String::from("Failed to parse character value"),
+            });
+        }
+        else if self.current_chr.is_some() && self.char_equals(SINGLE_QUOTES) {
+            return Err(LexerError {
+                message: String::from("Character literal may only contain one codepoint"),
+            });
+        }
+
+        let chr = self.current_chr.unwrap();
+        
+        self.next_char(); 
+
+        if self.current_chr.is_none() || (self.current_chr.is_some() && !self.char_equals(SINGLE_QUOTES)) {
+            return Err(LexerError {
+                message: String::from("Failed to parse character value: missing single-quotes"),
+            });
+        }
+        
+        return Ok(Token::CharValue {
+            value: chr
         });
     }
 
@@ -529,6 +567,18 @@ mod tests {
             tokens,
             vec![Token::BytesValue {
                 value: String::from(r#"b"hello \x01\03 \x44""#).as_bytes().to_vec()
+            },]
+        );
+    }
+
+    #[test]
+    fn test_character_literal() {
+        let source = String::from("'a'");
+        let tokens = lex_source(&source);
+        assert_eq!(
+            tokens,
+            vec![Token::CharValue {
+                value: 'a'
             },]
         );
     }
