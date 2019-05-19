@@ -42,9 +42,9 @@ fn get_identifiers_map() -> HashMap<String, Token> {
     identifiers.insert(String::from("return"), Token::Return);
 
     // Literal values
-    identifiers.insert(String::from("true"), Token::True);
-    identifiers.insert(String::from("false"), Token::False);
-    identifiers.insert(String::from("null"), Token::Null);
+    identifiers.insert(String::from("true"), Token::BoolValue { value: true });
+    identifiers.insert(String::from("false"), Token::BoolValue { value: false });
+    identifiers.insert(String::from("null"), Token::NullValue);
 
     // Builtin types
     identifiers.insert(String::from("int"), Token::IntType);

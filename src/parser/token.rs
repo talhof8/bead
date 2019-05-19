@@ -16,11 +16,6 @@ pub enum Token {
     FnReturnTypeDelim, // '->'
     Comma, // ','
 
-    // Literal values
-    True,
-    False,
-    Null,
-
     Symbol { name: String }, 
     CustomType { name: String },
 
@@ -45,6 +40,7 @@ pub enum Token {
     ListValue,
     DictType,
     DictValue,
+    NullValue,
 
     // Keywords
     If,
