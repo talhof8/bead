@@ -7,6 +7,7 @@ use std::str::FromStr;
 
 const SEMICOLON: char = ';';
 const DOUBLE_QUOTES: char = '"';
+const UNDERSCORE: char = '_';
 const BYTES_PREFIX: char = 'b';
 const DOT_SEPERATOR: char = '.';
 
@@ -102,7 +103,7 @@ where
 
         self.skip_redundant_characters();
 
-        if self.is_letter() {
+        if self.is_letter() || self.char_equals(UNDERSCORE) {
             return self.handle_identifier();
         }
 
@@ -193,8 +194,7 @@ where
         let mut identifier = String::from("");
 
         // Loop until end of word
-        // todo: allow underscores (so that variable & function names can be snake_cased)
-        while self.current_chr.is_some() && self.is_alphanumeric() {
+        while self.current_chr.is_some() && (self.is_alphanumeric() || self.char_equals(UNDERSCORE)) {
             identifier.push(self.current_chr.unwrap());
             self.next_char();
         }
@@ -431,14 +431,14 @@ mod tests {
     #[test]
     fn test_variable_identifiers() {
         let source =
-            String::from("str s1 int i float ff bytes ba char c tuple t list lll dict d enum e");
+            String::from("str some_str int i float _ff bytes ba char c tuple t list lll dict d enum e");
         let tokens = lex_source(&source);
         assert_eq!(
             tokens,
             vec![
                 Token::StringType,
                 Token::Symbol {
-                    name: String::from("s1")
+                    name: String::from("some_str")
                 },
                 Token::IntType,
                 Token::Symbol {
@@ -446,7 +446,7 @@ mod tests {
                 },
                 Token::FloatType,
                 Token::Symbol {
-                    name: String::from("ff")
+                    name: String::from("_ff")
                 },
                 Token::BytesType,
                 Token::Symbol {
