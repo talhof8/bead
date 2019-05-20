@@ -238,7 +238,8 @@ where
         {
             self.current_char_processed = true;
 
-            identifier.push(self.current_chr.unwrap());
+            identifier = String::from(""); // Reset identifier (i.e, remove the 'b' character).
+
             self.next_char();
 
             while self.current_chr.is_some() && !self.char_equals(DOUBLE_QUOTES) {
@@ -252,8 +253,8 @@ where
                 });
             }
 
-            identifier.push(self.current_chr.unwrap());
             self.next_char();
+            self.current_char_processed = false;
 
             return Ok(Token::BytesValue {
                 value: identifier.as_bytes().to_vec(),
@@ -575,6 +576,7 @@ mod tests {
             float f = 3.54;
             bool b = true;
             str s1 = "Hello World";
+            bytes bb = b"\x34b";
             list l = [i, f, b, s1, "some_val"];
         "#);
         let tokens = lex_source(&source);
@@ -600,6 +602,11 @@ mod tests {
                 Token::Symbol { name: String::from("s1") },
                 Token::Assignment,
                 Token::StringValue { value: String::from("Hello World") },
+                Token::Semicolon,
+                Token::BytesType,
+                Token::Symbol { name: String::from("bb") },
+                Token::Assignment,
+                Token::BytesValue { value: String::from(r#"\x34b"#).as_bytes().to_vec() },
                 Token::Semicolon,
                 Token::ListType,
                 Token::Symbol { name: String::from("l") },
@@ -687,7 +694,7 @@ mod tests {
         assert_eq!(
             tokens,
             vec![Token::BytesValue {
-                value: String::from(r#"b"hello \x01\03 \x44""#).as_bytes().to_vec()
+                value: String::from(r#"hello \x01\03 \x44"#).as_bytes().to_vec()
             },]
         );
     }
