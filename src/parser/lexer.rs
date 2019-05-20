@@ -311,7 +311,6 @@ where
     fn handle_string(&mut self) -> Result<Token, LexerError> {
         let mut string = String::from("");
 
-        string.push(self.current_chr.unwrap());
         self.next_char();
 
         while self.current_chr.is_some() && !self.char_equals(DOUBLE_QUOTES) {
@@ -324,8 +323,6 @@ where
                 message: String::from("Failed to parse string value: missing double-quotes"),
             });
         }
-
-        string.push(self.current_chr.unwrap());
 
         return Ok(Token::StringValue {
             value: string
@@ -602,7 +599,7 @@ mod tests {
                 Token::StringType,
                 Token::Symbol { name: String::from("s1") },
                 Token::Assignment,
-                Token::StringValue { value: String::from(r#""Hello World""#) },
+                Token::StringValue { value: String::from("Hello World") },
                 Token::Semicolon,
                 Token::ListType,
                 Token::Symbol { name: String::from("l") },
@@ -616,7 +613,7 @@ mod tests {
                 Token::Comma,
                 Token::Symbol { name: String::from("s1") },
                 Token::Comma,
-                Token::StringValue { value: String::from(r#""some_val""#) },
+                Token::StringValue { value: String::from("some_val") },
                 Token::RightSquareBracket,
                 Token::Semicolon
             ]
@@ -678,7 +675,7 @@ mod tests {
         assert_eq!(
             tokens,
             vec![Token::StringValue {
-                value: String::from(r#""Some string value""#)
+                value: String::from("Some string value")
             },]
         );
     }
