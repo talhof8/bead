@@ -578,6 +578,7 @@ mod tests {
             float f = 3.54;
             bool b = true;
             str s1 = "Hello World";
+            list l = [i, f, b, s1, "some_val"];
         "#);
         let tokens = lex_source(&source);
         assert_eq!(
@@ -602,6 +603,21 @@ mod tests {
                 Token::Symbol { name: String::from("s1") },
                 Token::Assignment,
                 Token::StringValue { value: String::from(r#""Hello World""#) },
+                Token::Semicolon,
+                Token::ListType,
+                Token::Symbol { name: String::from("l") },
+                Token::Assignment,
+                Token::LeftSquareBracket,
+                Token::Symbol { name: String::from("i") },
+                Token::Comma,
+                Token::Symbol { name: String::from("f") },
+                Token::Comma,
+                Token::Symbol { name: String::from("b") },
+                Token::Comma,
+                Token::Symbol { name: String::from("s1") },
+                Token::Comma,
+                Token::StringValue { value: String::from(r#""some_val""#) },
+                Token::RightSquareBracket,
                 Token::Semicolon
             ]
         );
