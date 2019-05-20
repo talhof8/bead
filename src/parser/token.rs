@@ -32,13 +32,9 @@ pub enum Token {
     BytesType,
     BytesValue { value: Vec<u8> },
     TupleType,
-    TupleValue,
     EnumType,
-    EnumValue,
     ListType,
-    ListValue,
     DictType,
-    DictValue,
     NullValue,
 
     // Keywords
