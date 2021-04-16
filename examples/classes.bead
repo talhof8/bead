@@ -1,0 +1,61 @@
+enum LogLevel {
+    Debug,
+    Info,
+    Warning,
+    Error
+};
+
+class Logger {
+    /**
+    * Properties must be explicitly declared as either 'priv'
+    * (i.e private) or 'pub' (i.e, public).
+    */
+    priv str name;
+
+    fn construct(str name) {
+        self.name = name;
+    }
+
+    fn clone() -> Logger;
+
+    fn debug(str message) {
+        self._write(LogLevel::Debug, message);
+    }
+
+    fn info(str message) {
+        self._write(LogLevel::Info, message);
+    }
+
+    fn warning(str message) {
+        self._write(LogLevel::Warning, message);
+    }
+    
+    // Methods, on the other hand, are public by default. 
+    // If you feel like explicitly declaring it - feel free to do so.
+    pub fn error(str message) {
+        self._write(LogLevel::Error, message);
+    }
+
+    priv fn write(LogLevel level, str message);
+}
+
+
+class FileLogger(Logger) {
+    pub str directory;
+    priv File file; 
+
+    fn construct(str directory, *args, **kwargs) {
+        super(*args, **kwargs);
+
+        self.directory = directory;
+        self.file = new File(directory, self.name);
+    }
+
+    fn destruct() {
+        // close file maybe?
+    }
+
+    pub write(LogLevel level, str message) {
+        // ...
+    }
+}
